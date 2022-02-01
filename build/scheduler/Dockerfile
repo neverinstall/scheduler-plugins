@@ -22,7 +22,7 @@ RUN RELEASE_VERSION=${RELEASE_VERSION} make build-scheduler.$ARCH
 
 FROM $ARCH/alpine:3.12
 
-COPY --from=0 /go/src/sigs.k8s.io/scheduler-plugins/bin/kube-scheduler /bin/kube-scheduler
+COPY --from=0 /home/pragyan/Golang/src/scheduler-plugins/bin/kube-scheduler /bin/kube-scheduler
 
 WORKDIR /bin
 CMD ["kube-scheduler"]
