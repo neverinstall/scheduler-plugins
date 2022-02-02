@@ -149,3 +149,5 @@ func SetDefaultsNodeResourceTopologyMatchArgs(obj *NodeResourceTopologyMatchArgs
 		}
 	}
 }
+
+func SetDefaultsQueueSchedulerArgs(args *QueueSchedulerArgs) {}

@@ -158,3 +158,11 @@ type NodeResourceTopologyMatchArgs struct {
 	MasterOverride  *string          `json:"masteroverride,omitempty"`
 	ScoringStrategy *ScoringStrategy `json:"scoringStrategy,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:defaulter-gen=true
+
+// QueueSchedulerArgs holds arguments used to configure QueueScheduler plugin.
+type QueueSchedulerArgs struct {
+	metav1.TypeMeta `json:",inline"`
+}

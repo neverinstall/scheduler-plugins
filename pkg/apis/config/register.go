@@ -43,9 +43,14 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&LoadVariationRiskBalancingArgs{},
 		&NodeResourceTopologyMatchArgs{},
 		&PreemptionTolerationArgs{},
+		&QueueSchedulerArgs{},
 	)
 	return nil
 }
+
+// scheme.AddTypeDefaultingFunc(&QueueSchedulerArgs{}, func(obj interface{}) {
+// 	SetObjectDefaultQueueSchedulerArgs(obj.(*QueueSchedulerArgs))
+// })
 
 func init() {
 	// We only register manually written functions here. The registration of the

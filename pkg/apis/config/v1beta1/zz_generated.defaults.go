@@ -29,7 +29,9 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
-	scheme.AddTypeDefaultingFunc(&CoschedulingArgs{}, func(obj interface{}) { SetObjectDefaultsCoschedulingArgs(obj.(*CoschedulingArgs)) })
+	scheme.AddTypeDefaultingFunc(&CoschedulingArgs{}, func(obj interface{}) {
+		SetObjectDefaultsCoschedulingArgs(obj.(*CoschedulingArgs))
+	})
 	scheme.AddTypeDefaultingFunc(&NodeResourcesAllocatableArgs{}, func(obj interface{}) {
 		SetObjectDefaultsNodeResourcesAllocatableArgs(obj.(*NodeResourcesAllocatableArgs))
 	})
@@ -41,6 +43,9 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	})
 	scheme.AddTypeDefaultingFunc(&NodeResourceTopologyMatchArgs{}, func(obj interface{}) {
 		SetObjectDefaultsNodeResourceTopologyMatchArgs(obj.(*NodeResourceTopologyMatchArgs))
+	})
+	scheme.AddTypeDefaultingFunc(&QueueSchedulerArgs{}, func(obj interface{}) {
+		SetObjectDefaultsQueueSchedulerArgs(obj.(*QueueSchedulerArgs))
 	})
 	return nil
 }
@@ -63,4 +68,8 @@ func SetObjectDefaultsLoadVariationRiskBalancingArgs(in *LoadVariationRiskBalanc
 
 func SetObjectDefaultsNodeResourceTopologyMatchArgs(in *NodeResourceTopologyMatchArgs) {
 	SetDefaultsNodeResourceTopologyMatchArgs(in)
+}
+
+func SetObjectDefaultsQueueSchedulerArgs(in *QueueSchedulerArgs) {
+	SetDefaultsQueueSchedulerArgs(in)
 }

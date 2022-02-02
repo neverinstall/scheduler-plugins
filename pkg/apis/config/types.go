@@ -153,3 +153,10 @@ type NodeResourceTopologyMatchArgs struct {
 
 // PreemptionTolerationArgs reuses DefaultPluginArgs.
 type PreemptionTolerationArgs unversioned.DefaultPreemptionArgs
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// QueueSchedulerArgs holds arguments used to configure QueueScheduler plugin.
+type QueueSchedulerArgs struct {
+	metav1.TypeMeta
+}
