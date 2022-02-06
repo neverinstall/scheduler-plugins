@@ -45,6 +45,9 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&PreemptionTolerationArgs{}, func(obj interface{}) {
 		SetObjectDefaultsPreemptionTolerationArgs(obj.(*PreemptionTolerationArgs))
 	})
+	// scheme.AddTypeDefaultingFunc(&QueueSchedulerArgs{}, func(obj interface{}) {
+	// 	SetObjectDefaultsQueueSchedulerArgs(obj.(*QueueSchedulerArgs))
+	// })
 	return nil
 }
 
@@ -71,3 +74,7 @@ func SetObjectDefaultsNodeResourceTopologyMatchArgs(in *NodeResourceTopologyMatc
 func SetObjectDefaultsPreemptionTolerationArgs(in *PreemptionTolerationArgs) {
 	SetDefaultsPreemptionTolerationArgs(in)
 }
+
+// func SetObjectDefaultsQueueSchedulerArgs(in *QueueSchedulerArgs) {
+// 	SetDefaultsQueueSchedulerArgs(in)
+// }

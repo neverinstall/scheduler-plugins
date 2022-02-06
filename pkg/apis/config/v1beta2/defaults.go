@@ -150,3 +150,5 @@ func SetDefaultsNodeResourceTopologyMatchArgs(obj *NodeResourceTopologyMatchArgs
 func SetDefaultsPreemptionTolerationArgs(obj *PreemptionTolerationArgs) {
 	k8sschedulerconfigv1beta2.SetDefaults_DefaultPreemptionArgs((*schedulerconfigv1beta2.DefaultPreemptionArgs)(obj))
 }
+
+// func SetDefaultsQueueSchedulerArgs(args *QueueSchedulerArgs) {}

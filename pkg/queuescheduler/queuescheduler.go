@@ -17,12 +17,12 @@ type QueueScheduler struct{}
 
 var _ framework.QueueSortPlugin = &QueueScheduler{}
 
-const PluginName = "QueueScheduler"
+const Name = "QueueScheduler"
 
 // To implement framework.Plugin
 func (qs QueueScheduler) Name() string {
 	// Name is the name of the plugin used in the Registry and configurations.
-	return PluginName
+	return Name
 }
 
 // Check if the pod has a label called priority and if it does, then give this pod preference
