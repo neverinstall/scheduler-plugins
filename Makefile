@@ -49,15 +49,15 @@ build.arm64v8: build-controller.arm64v8 build-scheduler.arm64v8
 
 .PHONY: build-controller
 build-controller: autogen
-	$(COMMONENVVAR) $(BUILDENVVAR) go build -ldflags '-w' -o bin/controller cmd/controller/controller.go
+	$(COMMONENVVAR) $(BUILDENVVAR) go build -o bin/controller cmd/controller/controller.go
 
 .PHONY: build-controller.amd64
 build-controller.amd64: autogen
-	$(COMMONENVVAR) $(BUILDENVVAR) GOARCH=amd64 go build -ldflags '-w' -o bin/controller cmd/controller/controller.go
+	$(COMMONENVVAR) $(BUILDENVVAR) GOARCH=amd64 go build -o bin/controller cmd/controller/controller.go
 
 .PHONY: build-controller.arm64v8
 build-controller.arm64v8: autogen
-	GOOS=linux $(BUILDENVVAR) GOARCH=arm64 go build -ldflags '-w' -o bin/controller cmd/controller/controller.go
+	GOOS=linux $(BUILDENVVAR) GOARCH=arm64 go build -o bin/controller cmd/controller/controller.go
 
 .PHONY: build-scheduler
 build-scheduler: autogen
@@ -73,9 +73,8 @@ build-scheduler.arm64v8: autogen
 
 .PHONY: local-image
 local-image: clean
-	docker build -f ./build/scheduler/Dockerfile --build-arg ARCH="amd64" --build-arg RELEASE_VERSION="$(RELEASE_VERSION)" -t $(LOCAL_REGISTRY)/$(LOCAL_IMAGE) .
-	
-# docker build -f ./build/controller/Dockerfile --build-arg ARCH="amd64" -t $(LOCAL_REGISTRY)/$(LOCAL_CONTROLLER_IMAGE) .
+#docker build -f ./build/scheduler/Dockerfile --build-arg ARCH="amd64" --build-arg RELEASE_VERSION="$(RELEASE_VERSION)" -t $(LOCAL_REGISTRY)/$(LOCAL_IMAGE) .
+	docker build -f ./build/controller/Dockerfile --build-arg ARCH="amd64" -t $(LOCAL_REGISTRY)/$(LOCAL_CONTROLLER_IMAGE) .
 
 .PHONY: release-image.amd64
 release-image.amd64: clean
