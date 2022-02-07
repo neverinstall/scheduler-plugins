@@ -1,6 +1,7 @@
 package queuescheduler
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,12 @@ type QueueScheduler struct{}
 var _ framework.QueueSortPlugin = &QueueScheduler{}
 
 const Name = "QueueScheduler"
+
+func log(msg string) {
+	klog.Info("\n\n-------------------------------------------------------\n")
+	klog.Infof(fmt.Sprintf("%s \n", msg))
+	klog.Info("-------------------------------------------------------\n\n")
+}
 
 // To implement framework.Plugin
 func (qs QueueScheduler) Name() string {
@@ -45,9 +52,7 @@ func GetPodPriority(pod *v1.Pod) int32 {
 func (qs *QueueScheduler) Less(pInfo1, pInfo2 *framework.QueuedPodInfo) bool {
 	// k := "label = string-index"
 
-	klog.Info("\n\n-------------------------------------------------------\n")
-	klog.Infof("Made it into the Less function of the custon scheduler \n")
-	klog.Info("-------------------------------------------------------\n\n")
+	log("Made it into the Less function of the custon scheduler")
 
 	priority1 := GetPodPriority(pInfo1.Pod)
 	priority2 := GetPodPriority(pInfo2.Pod)
@@ -71,5 +76,7 @@ func compareQualityOfService(p1, p2 *v1.Pod) bool {
 
 // New initializes a new plugin and returns it.
 func New(obj runtime.Object, _ framework.Handle) (framework.Plugin, error) {
+	log("Initialize new framework pluging &QueueScheduler{}")
+
 	return &QueueScheduler{}, nil
 }
