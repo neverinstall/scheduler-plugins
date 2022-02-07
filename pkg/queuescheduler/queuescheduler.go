@@ -8,7 +8,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	corev1 "k8s.io/component-helpers/scheduling/corev1"
-	"k8s.io/klog/v2"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
@@ -21,9 +20,9 @@ var _ framework.QueueSortPlugin = &QueueScheduler{}
 const Name = "QueueScheduler"
 
 func log(msg string) {
-	klog.Info("\n\n-------------------------------------------------------\n")
-	klog.Infof(fmt.Sprintf("%s \n", msg))
-	klog.Info("-------------------------------------------------------\n\n")
+	fmt.Printf("\n\n-------------------------------------------------------\n")
+	fmt.Printf("%s \n", msg)
+	fmt.Printf("-------------------------------------------------------\n\n")
 }
 
 // To implement framework.Plugin
@@ -75,7 +74,7 @@ func compareQualityOfService(p1, p2 *v1.Pod) bool {
 }
 
 // New initializes a new plugin and returns it.
-func New(obj runtime.Object, _ framework.Handle) (framework.Plugin, error) {
+func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 	log("Initialize new framework pluging &QueueScheduler{}")
 
 	return &QueueScheduler{}, nil
