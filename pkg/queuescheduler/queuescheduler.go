@@ -63,7 +63,7 @@ func (qs *QueueScheduler) Less(pInfo1, pInfo2 *framework.QueuedPodInfo) bool {
 	priority1 := GetPodPriority(pInfo1, currentUnixTime)
 	priority2 := GetPodPriority(pInfo2, currentUnixTime)
 
-	fmt.Printf("priority1 = %d, priority2 = %d\n", priority1, priority2)
+	log(fmt.Sprintf("Priority1 = %d, Priority2 = %d\n", priority1, priority2))
 
 	return (priority1 > priority2) || ((priority1 == priority2) && compareQualityOfService(pInfo1.Pod, pInfo2.Pod))
 }
