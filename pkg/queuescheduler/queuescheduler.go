@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	corev1 "k8s.io/component-helpers/scheduling/corev1"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
@@ -32,29 +32,38 @@ func (qs QueueScheduler) Name() string {
 }
 
 // Check if the pod has a label called priority and if it does, then give this pod preference
-func GetPodPriority(pod *v1.Pod) int32 {
+func GetPodPriority(podInfo *framework.QueuedPodInfo, currentUnixTime int64) int32 {
+	pod := podInfo.Pod
+
+	if pod.ObjectMeta.Labels == nil {
+		return int32(currentUnixTime - podInfo.Timestamp.Unix())
+	}
+
+	// fmt.Println("pod.ObjectMeta.Labels", pod.ObjectMeta.Labels)
 	if labelValue, ok := pod.ObjectMeta.Labels["priority"]; ok {
 		priority, err := strconv.Atoi(strings.Split(labelValue, "-")[1])
 
-		if err != nil {
+		if err == nil {
 			return int32(priority)
 		}
-
 	}
 
-	return corev1.PodPriority(pod)
+	// if one pod was scheduled earlier than give that pod higer priority
+	return int32(currentUnixTime - podInfo.Timestamp.Unix())
 }
 
 // Less is the function used by the activeQ heap algorithm to sort pods.
 // It sorts pods based on their priorities. When the priorities are equal, it uses
 // the Pod QoS classes to break the tie.
 func (qs *QueueScheduler) Less(pInfo1, pInfo2 *framework.QueuedPodInfo) bool {
-	// k := "label = string-index"
+	// log("Made it into the Less function of the custon scheduler")
 
-	log("Made it into the Less function of the custon scheduler")
+	currentUnixTime := time.Now().Unix()
 
-	priority1 := GetPodPriority(pInfo1.Pod)
-	priority2 := GetPodPriority(pInfo2.Pod)
+	priority1 := GetPodPriority(pInfo1, currentUnixTime)
+	priority2 := GetPodPriority(pInfo2, currentUnixTime)
+
+	fmt.Printf("priority1 = %d, priority2 = %d\n", priority1, priority2)
 
 	return (priority1 > priority2) || ((priority1 == priority2) && compareQualityOfService(pInfo1.Pod, pInfo2.Pod))
 }

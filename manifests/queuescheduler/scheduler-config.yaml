@@ -161,6 +161,7 @@ data:
                 disabled:
                     - name: "*"
 ---
+# should be part of nodeSelector
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -171,7 +172,9 @@ metadata:
   name: custom-queue-scheduler
   namespace: cs-ns
 spec:
-  replicas: 1
+  replicas: 2
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: custom-queue-scheduler
@@ -193,9 +196,9 @@ spec:
             - --kubeconfig=/etc/kubernetes/scheduler.conf
             - --leader-elect=false
             - --config=/etc/config/queue-scheduler-config.yaml
-          image: johanliebert12/sigs.k8s.io-custom-scheduler:0.1.6
-          imagePullPolicy: IfNotPresent
-          # imagePullPolicy: Never
+          image: johanliebert12/sigs.k8s.io-custom-scheduler:0.1.7
+          # imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           livenessProbe:
             failureThreshold: 8
             httpGet:
