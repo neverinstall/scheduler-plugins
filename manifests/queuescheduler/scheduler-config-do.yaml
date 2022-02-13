@@ -1,56 +1,10 @@
-# create namespace
-apiVersion: v1
-kind: Namespace
-metadata:
-  creationTimestamp: null
-  name: cs-ns
-spec: {}
-status: {}
-
----
 # service account
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
   name: cs-sa
-  namespace: cs-ns
-
----
-#  role
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  creationTimestamp: null
-  name: listpod
-  namespace: cs-ns
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - list
-      - get
-      - watch
-
----
-# role binding
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  creationTimestamp: null
-  name: custom-queue-scheduler-role-binding
-  namespace: cs-ns
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: listpod
-subjects:
-  - kind: ServiceAccount
-    name: cs-sa
-    namespace: cs-ns
-
+  namespace: speedtest-server
 ---
 # cluster role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -122,6 +76,9 @@ rules:
   - apiGroups: ["", "v1"]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
 
 ---
 # cluster role binding
@@ -137,13 +94,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: cs-sa
-    namespace: cs-ns
+    namespace: speedtest-server
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: queue-scheduler-config
-  namespace: cs-ns
+  namespace: speedtest-server
 data:
   queue-scheduler-config.yaml: |
     apiVersion: kubescheduler.config.k8s.io/v1beta2
@@ -171,7 +128,7 @@ metadata:
     component: kube-scheduler
     tier: control-plane
   name: custom-queue-scheduler
-  namespace: cs-ns
+  namespace: speedtest-server
 
 spec:
   replicas: 1
@@ -203,8 +160,10 @@ spec:
             - --kubeconfig=/etc/kubernetes/scheduler.conf
             - --leader-elect=false
             - --config=/etc/config/queue-scheduler-config.yaml
-          image: johanliebert12/sigs.k8s.io-custom-scheduler:0.1.8
-          imagePullPolicy: IfNotPresent
+
+          image: neverinstallregistry.azurecr.io/custom-queue-scheduler:latest
+
+          imagePullPolicy: Always
 
           livenessProbe:
             failureThreshold: 8
@@ -244,6 +203,9 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+
+      imagePullSecrets:
+        - name: azurecr-cred
 
       volumes:
         - hostPath:

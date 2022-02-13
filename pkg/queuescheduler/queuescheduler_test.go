@@ -68,7 +68,7 @@ func TestCustomLessFunction(t *testing.T) {
 	}
 
 	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.name, func(_ *testing.T) {
 			plugin := &QueueScheduler{}
 
 			returnedValue := plugin.Less(testCase.pInfo1, testCase.pInfo2)
@@ -124,3 +124,5 @@ func getResourceLimits(cpu, memory string) v1.ResourceList {
 	}
 	return res
 }
+
+// export KUBECONFIG=$KUBECONFIG:$HOME/.kube/config:k8s-azure-central-india-config:k8s-azure-southeast-asia-config:k8s-azure-west-us-config:k8s-do-eu-config

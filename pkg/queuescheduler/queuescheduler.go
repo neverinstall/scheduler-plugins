@@ -8,6 +8,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
@@ -19,10 +20,14 @@ var _ framework.QueueSortPlugin = &QueueScheduler{}
 
 const Name = "QueueScheduler"
 
-func log(msg string) {
-	fmt.Printf("\n\n-------------------------------------------------------\n")
-	fmt.Printf("%s \n", msg)
-	fmt.Printf("-------------------------------------------------------\n\n")
+func log(msg string, logType string) {
+	switch logType {
+	case "info":
+		klog.Info("\n", msg, "\n")
+
+	case "error":
+		klog.Error("\n", msg, "\n")
+	}
 }
 
 // To implement framework.Plugin
@@ -56,14 +61,12 @@ func GetPodPriority(podInfo *framework.QueuedPodInfo, currentUnixTime int64) int
 // It sorts pods based on their priorities. When the priorities are equal, it uses
 // the Pod QoS classes to break the tie.
 func (qs *QueueScheduler) Less(pInfo1, pInfo2 *framework.QueuedPodInfo) bool {
-	// log("Made it into the Less function of the custon scheduler")
-
 	currentUnixTime := time.Now().Unix()
 
 	priority1 := GetPodPriority(pInfo1, currentUnixTime)
 	priority2 := GetPodPriority(pInfo2, currentUnixTime)
 
-	log(fmt.Sprintf("Priority1 = %d, Priority2 = %d\n", priority1, priority2))
+	log(fmt.Sprintf("Priority1 = %d, Priority2 = %d\n", priority1, priority2), "info")
 
 	return (priority1 > priority2) || ((priority1 == priority2) && compareQualityOfService(pInfo1.Pod, pInfo2.Pod))
 }
@@ -84,7 +87,7 @@ func compareQualityOfService(p1, p2 *v1.Pod) bool {
 
 // New initializes a new plugin and returns it.
 func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
-	log("Initialize new framework pluging &QueueScheduler{}")
+	log("Initialize new framework pluging &QueueScheduler{}", "info")
 
 	return &QueueScheduler{}, nil
 }

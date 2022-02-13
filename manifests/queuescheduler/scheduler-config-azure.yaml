@@ -1,0 +1,250 @@
+# service account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: cs-sa
+  namespace: speedtest-server
+---
+#  role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: listpod
+  namespace: speedtest-server
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+      - get
+      - watch
+
+---
+# role binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: custom-queue-scheduler-role-binding
+  namespace: speedtest-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: listpod
+subjects:
+  - kind: ServiceAccount
+    name: cs-sa
+    namespace: speedtest-server
+
+---
+# cluster role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: allowlistnode
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["", "events.k8s.io"]
+    resources: ["events"]
+    verbs: ["create", "patch", "update"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create"]
+  - apiGroups: ["coordination.k8s.io"]
+    resourceNames: ["kube-scheduler"]
+    resources: ["leases"]
+    verbs: ["get", "update"]
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resourceNames: ["kube-scheduler"]
+    resources: ["endpoints"]
+    verbs: ["get", "update"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["delete", "get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["bindings", "pods/binding"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["patch", "update"]
+  - apiGroups: [""]
+    resources: ["replicationcontrollers", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps", "extensions"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims", "persistentvolumes"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+  - apiGroups: ["storage.k8s.io"]
+    resources:
+      ["csinodes", "storageclasses", "csidrivers", "csistoragecapacities"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["scheduling.sigs.k8s.io"]
+    resources: ["podgroups", "elasticquotas"]
+    verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+  - apiGroups: ["", "v1"]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+
+---
+# cluster role binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: custom-queue-scheduler-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: allowlistnode
+subjects:
+  - kind: ServiceAccount
+    name: cs-sa
+    namespace: speedtest-server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: queue-scheduler-config
+  namespace: speedtest-server
+data:
+  queue-scheduler-config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1beta2
+    kind: KubeSchedulerConfiguration
+    leaderElection:
+        leaderElect: false
+    clientConnection:
+        kubeconfig: "/etc/kubernetes/scheduler.conf"
+    profiles:
+        - schedulerName: custom-queue-scheduler
+          plugins:
+            queueSort:
+                enabled:
+                    - name: QueueScheduler
+                disabled:
+                    - name: "*"
+---
+# should be part of nodeSelector
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  labels:
+    app: custom-queue-scheduler
+    component: kube-scheduler
+    tier: control-plane
+  name: custom-queue-scheduler
+  namespace: speedtest-server
+
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: custom-queue-scheduler
+
+  template:
+    metadata:
+      labels:
+        app: custom-queue-scheduler
+
+    spec:
+      nodeSelector:
+        workerset: cluster-core-md
+
+      serviceAccountName: cs-sa
+      containers:
+        - command:
+            - kube-scheduler
+            - --bind-address=0.0.0.0
+            - --port=10308
+            - --secure-port=10330
+            - --authentication-kubeconfig=/etc/kubernetes/scheduler.conf
+            - --authorization-kubeconfig=/etc/kubernetes/scheduler.conf
+            - --kubeconfig=/etc/kubernetes/scheduler.conf
+            - --leader-elect=false
+            - --config=/etc/config/queue-scheduler-config.yaml
+
+          image: neverinstallregistry.azurecr.io/custom-queue-scheduler:latest
+
+          imagePullPolicy: Always
+
+          livenessProbe:
+            failureThreshold: 8
+            httpGet:
+              path: /healthz
+              port: 10330
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 120
+
+          name: kube-scheduler
+
+          resources:
+            requests:
+              cpu: 100m
+
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz
+              port: 10330
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 120
+
+          volumeMounts:
+            - mountPath: /etc/kubernetes/scheduler.conf
+              name: kubeconfig
+              readOnly: true
+
+            - mountPath: /etc/config
+              name: queue-scheduler-config
+
+      priorityClassName: system-node-critical
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
+      imagePullSecrets:
+        - name: azurecr-cred
+
+      volumes:
+        - hostPath:
+            path: /etc/kubernetes/scheduler.conf
+            type: FileOrCreate
+          name: kubeconfig
+
+        - name: queue-scheduler-config
+          configMap:
+            name: queue-scheduler-config
