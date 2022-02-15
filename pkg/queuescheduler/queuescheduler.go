@@ -23,10 +23,10 @@ const Name = "QueueScheduler"
 func log(msg string, logType string) {
 	switch logType {
 	case "info":
-		klog.Info("\n", msg, "\n")
+		klog.Info(msg, "\n\n")
 
 	case "error":
-		klog.Error("\n", msg, "\n")
+		klog.Error(msg, "\n\n")
 	}
 }
 
@@ -73,6 +73,8 @@ func (qs *QueueScheduler) Less(pInfo1, pInfo2 *framework.QueuedPodInfo) bool {
 	priority1, labelExists1 := GetPodPriority(pInfo1, currentUnixTime)
 	priority2, labelExists2 := GetPodPriority(pInfo2, currentUnixTime)
 
+	log(fmt.Sprintf("Priority1 = %d, Priority2 = %d\n", priority1, priority2), "info")
+
 	// if label exists for either of the two pods, then just use that as priority
 	// else use the Timestamp difference
 	if labelExists1 && labelExists2 {
@@ -82,8 +84,6 @@ func (qs *QueueScheduler) Less(pInfo1, pInfo2 *framework.QueuedPodInfo) bool {
 	} else if !labelExists1 && labelExists2 {
 		return false
 	}
-
-	log(fmt.Sprintf("Priority1 = %d, Priority2 = %d\n", priority1, priority2), "info")
 
 	return (priority1 > priority2) || ((priority1 == priority2) && compareQualityOfService(pInfo1.Pod, pInfo2.Pod))
 }
