@@ -1,53 +1,39 @@
 #!/bin/sh
 
-kpath=$HOME/.kube
+all_or_one=$1
 
-if [[ -f $kpath/india ]]; then
-    echo "Found india config file"
-else
-    echo "india config file not found"
-    exit 1
-fi;
+if [[ $all_or_one = 'ukdo' || $all_or_one = 'all' ]]; then
+    printf "\ndeploying to uk do"
+    python3 $HOME/Python/utils/setKubeContext.py ukdo
+    kubectl rollout restart -f ./scheduler-config-do.yaml
+fi
 
-if [[ -f $kpath/westus ]]; then
-    echo "Found westus config file"
-else
-    echo "westus config file not found"
-    exit 1
-fi;
+if [[ $all_or_one = 'indiaaz' || $all_or_one = 'all' ]]; then
+    printf "\ndeploying to india azure"
+    python3 $HOME/Python/utils/setKubeContext.py india
+    kubectl rollout restart -f ./scheduler-config-azure.yaml
+fi
 
-if [[ -f $kpath/seasia ]]; then
-    echo "Found seasia config file"
-else
-    echo "seasia config file not found"
-    exit 1
-fi;
+if [[ $all_or_one = 'seasiaaz' || $all_or_one = 'all' ]]; then
+    printf "\ndeploying to southeast asia azure"
+    python3 $HOME/Python/utils/setKubeContext.py seasia
+    kubectl rollout restart -f ./scheduler-config-azure.yaml
+fi
 
-if [[ -f $kpath/ukdo ]]; then
-    echo "Found ukdo config file"
-else
-    echo "ukdo config file not found"
-    exit 1
-fi;
+if [[ $all_or_one = 'usaz' || $all_or_one = 'all' ]]; then
+    printf "\ndeploying to westus azure"
+    python3 $HOME/Python/utils/setKubeContext.py westus
+    kubectl rollout restart -f ./scheduler-config-azure.yaml
+fi
 
-echo -e "\ndeploying to uk do\n"
-mv $kpath/ukdo $kpath/config
-kubectl rollout restart -f ./scheduler-config-do.yaml
-mv $kpath/config $kpath/ukdo
+if [[ $all_or_one = 'indiado' || $all_or_one = 'all' ]]; then
+    printf "\ndeploying to do india"
+    python3 $HOME/Python/utils/setKubeContext.py indiado
+    kubectl rollout restart -f ./scheduler-config-azure.yaml # the core is named like it is in azure
+fi
 
-
-echo -e "\ndeploying to india azure\n"
-mv $kpath/india $kpath/config
-kubectl rollout restart -f ./scheduler-config-azure.yaml
-mv $kpath/config $kpath/india
-
-
-echo -e "\ndeploying to southeast asia azure\n"
-mv $kpath/seasia $kpath/config
-kubectl rollout restart -f ./scheduler-config-azure.yaml
-mv $kpath/config $kpath/seasia
-
-echo -e "\ndeploying to westus azure\n"
-mv $kpath/westus $kpath/config
-kubectl rollout restart -f ./scheduler-config-azure.yaml
-mv $kpath/config $kpath/westus
+if [[ $all_or_one = 'sfdo' || $all_or_one = 'all' ]]; then
+    printf "\ndeploying to do san fransisco"
+    python3 $HOME/Python/utils/setKubeContext.py sfdo
+    kubectl rollout restart -f ./scheduler-config-azure.yaml # the core is named like it is in azure
+fi
