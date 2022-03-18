@@ -104,7 +104,7 @@ func compareQualityOfService(p1, p2 *v1.Pod) bool {
 
 // New initializes a new plugin and returns it.
 func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
-	log("Initialize new framework pluging &QueueScheduler{}", "info")
+	log("Initialize new framework plugin &QueueScheduler{}", "info")
 
 	return &QueueScheduler{}, nil
 }
