@@ -18,46 +18,40 @@ package noderesourcetopology
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	restclient "k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
 
 	topologyv1alpha1 "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/apis/topology/v1alpha1"
 	topoclientset "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/generated/clientset/versioned"
 	topologyinformers "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/generated/informers/externalversions"
-	listerv1alpha1 "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/generated/listers/topology/v1alpha1"
+
+	apiconfig "sigs.k8s.io/scheduler-plugins/apis/config"
+	nrtcache "sigs.k8s.io/scheduler-plugins/pkg/noderesourcetopology/cache"
+	"sigs.k8s.io/scheduler-plugins/pkg/noderesourcetopology/stringify"
 )
 
-func findNodeTopology(nodeName string, lister listerv1alpha1.NodeResourceTopologyLister) *topologyv1alpha1.NodeResourceTopology {
-	klog.V(5).InfoS("Lister for nodeResTopoPlugin", "lister", lister)
-	nodeTopology, err := lister.Get(nodeName)
+func initNodeTopologyInformer(tcfg *apiconfig.NodeResourceTopologyMatchArgs, handle framework.Handle) (nrtcache.Cache, error) {
+	topoClient, err := topoclientset.NewForConfig(handle.KubeConfig())
 	if err != nil {
-		klog.V(5).ErrorS(err, "Cannot get NodeTopologies from NodeResourceTopologyLister")
-		return nil
-	}
-	return nodeTopology
-}
-
-func initNodeTopologyInformer(kubeConfig *restclient.Config) (listerv1alpha1.NodeResourceTopologyLister, error) {
-	topoClient, err := topoclientset.NewForConfig(kubeConfig)
-	if err != nil {
-		klog.ErrorS(err, "Cannot create clientset for NodeTopologyResource", "kubeConfig", kubeConfig)
+		klog.ErrorS(err, "Cannot create clientset for NodeTopologyResource", "kubeConfig", handle.KubeConfig())
 		return nil, err
 	}
 
 	topologyInformerFactory := topologyinformers.NewSharedInformerFactory(topoClient, 0)
 	nodeTopologyInformer := topologyInformerFactory.Topology().V1alpha1().NodeResourceTopologies()
-	nodeResourceTopologyLister := nodeTopologyInformer.Lister()
+	nodeTopologyLister := nodeTopologyInformer.Lister()
 
 	klog.V(5).InfoS("Start nodeTopologyInformer")
 	ctx := context.Background()
 	topologyInformerFactory.Start(ctx.Done())
 	topologyInformerFactory.WaitForCacheSync(ctx.Done())
 
-	return nodeResourceTopologyLister, nil
+	return nrtcache.NewPassthrough(nodeTopologyLister), nil
 }
 
 func createNUMANodeList(zones topologyv1alpha1.ZoneList) NUMANodeList {
@@ -75,6 +69,7 @@ func createNUMANodeList(zones topologyv1alpha1.ZoneList) NUMANodeList {
 				continue
 			}
 			resources := extractResources(zone)
+			klog.V(6).InfoS("extracted NUMA resources", stringify.ResourceListToLoggable(zone.Name, resources)...)
 			nodes = append(nodes, NUMANode{NUMAID: numaID, Resources: resources})
 		}
 	}
@@ -89,6 +84,35 @@ func makePodByResourceList(resources *v1.ResourceList) *v1.Pod {
 					Resources: v1.ResourceRequirements{
 						Requests: *resources,
 						Limits:   *resources,
+					},
+				},
+			},
+		},
+	}
+}
+
+func makePodWithReqByResourceList(resources *v1.ResourceList) *v1.Pod {
+	return &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Resources: v1.ResourceRequirements{
+						Requests: *resources,
+					},
+				},
+			},
+		},
+	}
+}
+
+func makePodWithReqAndLimitByResourceList(resourcesReq, resourcesLim *v1.ResourceList) *v1.Pod {
+	return &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Resources: v1.ResourceRequirements{
+						Requests: *resourcesReq,
+						Limits:   *resourcesLim,
 					},
 				},
 			},
@@ -139,7 +163,6 @@ func makePodByResourceListWithManyContainers(resources *v1.ResourceList, contain
 func extractResources(zone topologyv1alpha1.Zone) v1.ResourceList {
 	res := make(v1.ResourceList)
 	for _, resInfo := range zone.Resources {
-		klog.V(5).InfoS("Extract resources for zone", "resName", resInfo.Name, "resAvailable", resInfo.Available)
 		res[v1.ResourceName(resInfo.Name)] = resInfo.Available
 	}
 	return res
@@ -150,4 +173,25 @@ func newPolicyHandlerMap() PolicyHandlerMap {
 		topologyv1alpha1.SingleNUMANodePodLevel:       newPodScopedHandler(),
 		topologyv1alpha1.SingleNUMANodeContainerLevel: newContainerScopedHandler(),
 	}
+}
+
+func logNumaNodes(desc, nodeName string, nodes NUMANodeList) {
+	for _, numaNode := range nodes {
+		numaLogKey := fmt.Sprintf("%s/node-%d", nodeName, numaNode.NUMAID)
+		klog.V(6).InfoS(desc, stringify.ResourceListToLoggable(numaLogKey, numaNode.Resources)...)
+	}
+}
+
+func logNRT(desc string, nrtObj *topologyv1alpha1.NodeResourceTopology) {
+	if !klog.V(6).Enabled() {
+		// avoid the expensive marshal operation
+		return
+	}
+
+	ntrJson, err := json.MarshalIndent(nrtObj, "", " ")
+	if err != nil {
+		klog.V(6).ErrorS(err, "failed to marshal noderesourcetopology object")
+		return
+	}
+	klog.V(6).Info(desc, "noderesourcetopology", string(ntrJson))
 }

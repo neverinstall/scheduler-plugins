@@ -29,6 +29,8 @@ Dependency:
 
 ### Config
 
+#### Scheduler
+
 Enable the "NodeResourceTopologyMatch" Filter and Score plugins via SchedulerConfigConfiguration.
 
 ```yaml
@@ -51,10 +53,27 @@ profiles:
   pluginConfig:
   - name: NodeResourceTopologyMatch
     args:
-      # other strategies are MostAllocatable and BalancedAllocation
+      # other strategies are MostAllocated and BalancedAllocation
       scoringStrategy:
-        type: "LeastAllocatable"
+        type: "LeastAllocated"
 ```
+
+#### Cluster
+
+The Topology-aware scheduler performs its decision over a number of node-specific hardware details or configuration settings which have node granularity (not at cluster granularity).
+Consistent settings across a set of nodes or all over the cluster is a fundamental prerequisite for the scheduler to work correctly.
+In other words, it is a prerequisite that a set of nodes share the same NUMA topology and kubelet configuration, at least for settings like topology and resource (cpu, memory, device) managers.
+
+However, the scheduler has no means to enforce or even validate this prerequisite;
+for example the [NodeResourceTopology](https://github.com/k8stopologyawareschedwg/noderesourcetopology-api) CRD does not expose all the relevant fields, nor it should (it would be out of scope).
+
+Hence, proper cluster configuration is expected from the cluster admins, or to other software components, like controllers or operators, outside of the scope here.
+
+Should the cluster need to have different settings (e.g. topology manager) or NUMA topologies, we recommend to use the
+[standard kubernetes tools](https://kubernetes.io/blog/2017/03/advanced-scheduling-in-kubernetes/) to identify each set of nodes
+using [affinity](https://kubernetes.io/docs/user-guide/node-selection/#node-affinity-beta-feature) or also
+[taints](https://kubernetes.io/docs/user-guide/node-selection/#taints-and-toleations-beta-feature).
+
 
 ### Demo
 
@@ -63,6 +82,8 @@ Let us assume we have two nodes in a cluster deployed with sample-device-plugin 
 ![Setup](numa-topology.png)
 
 The hardware topology corresponding to both the nodes is represented by the below CRD instances. These CRD instances are supposed to be created by Node Agents like [Resource Topology Exporter](https://github.com/k8stopologyawareschedwg/resource-topology-exporter) (RTE) or Node feature Discovery (NFD). Please refer to issue [Exposing Hardware Topology through CRDs in NFD](https://github.com/kubernetes-sigs/node-feature-discovery/issues/333) and [Design document](https://docs.google.com/document/d/1Q-4wSu1tzmbOXyGk_2r5_mK6JdXXJA-bOd3cAtBFnwo/edit?ts=5f24171f#) which captures details of enhancing NFD to expose node resource topology through CRDs.
+
+For configuring your cluster with [NFD-topology updater](https://github.com/kubernetes-sigs/node-feature-discovery/blob/master/docs/get-started/introduction.md#nfd-topology-updater), a software component in Node Feature Discovery which creates NodeResourceTopology CRs corresponding to nodes in the cluster follow the Quick Start guide [here]( https://github.com/kubernetes-sigs/node-feature-discovery/blob/master/docs/get-started/quick-start.md#additional-optional-installation-steps).
 
 ```yaml
 # Worker Node A CRD spec
@@ -148,7 +169,7 @@ zones:
              $ kubectl get noderesourcetopologies.topology.node.k8s.io
             ```
 
-         1. Deploy the CRs representative of the hardware topology of the worker-node-A and worker-node-B:
+         1. Deploy the CRs representative of the hardware topology of the worker-node-A and worker-node-B if CRs haven't been created using RTE or NFD as mentioned above:
 
             ```bash
              $ kubectl create -f worker-node-A.yaml
@@ -157,7 +178,6 @@ zones:
             NOTE: In case you are testing this demo by creating CRs manually, ensure that the names of the nodes in the cluster match the CR names.
 
 - Copy cluster kubeconfig file to /etc/kubernetes/scheduler.conf
-
 - Build the image locally
 
     ```bash
@@ -218,8 +238,10 @@ spec:
       schedulerName: topo-aware-scheduler
       containers:
       - name: test-deployment-1-container-1
-        image: nginx:1.7.9
+        image: quay.io/fromani/numalign
         imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args: [ "while true; do numalign; sleep 100000; done;" ]
         resources:
           limits:
             cpu: 1

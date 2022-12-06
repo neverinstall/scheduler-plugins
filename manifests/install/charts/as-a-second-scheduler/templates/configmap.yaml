@@ -1,3 +1,4 @@
+{{- if .Values.plugins.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,35 +6,27 @@ metadata:
   namespace: {{ .Values.scheduler.namespace }}
 data:
   scheduler-config.yaml: |
-    apiVersion: kubescheduler.config.k8s.io/v1beta1
+    apiVersion: kubescheduler.config.k8s.io/v1beta3
     kind: KubeSchedulerConfiguration
     leaderElection:
-      leaderElect: false
+      leaderElect: {{ .Values.scheduler.leaderElect }}
     profiles:
-    - schedulerName: scheduler-plugins-scheduler
+    # Compose all plugins in one profile
+    - schedulerName: {{ .Values.scheduler.name }}
       plugins:
-        queueSort:
+        multiPoint:
           enabled:
-          - name: Coscheduling
+          {{- range $.Values.plugins.enabled }}
+          - name: {{ title . }}
+          {{- end }}
           disabled:
-          - name: "*"
-        preFilter:
-          enabled:
-          - name: Coscheduling
-        postFilter:
-          enabled:
-          - name: Coscheduling
-        permit:
-          enabled:
-          - name: Coscheduling
-        reserve:
-          enabled:
-          - name: Coscheduling
-        postBind:
-          enabled:
-          - name: Coscheduling
-      pluginConfig:
-      - name: Coscheduling
-        args:
-          permitWaitingTimeSeconds: 10
-          deniedPGExpirationTimeSeconds: 3
+          {{- range $.Values.plugins.disabled }}
+          - name: {{ title . }}
+          {{- end }}
+      {{- if $.Values.pluginConfig }}
+      pluginConfig: {{ toYaml $.Values.pluginConfig | nindent 6 }}
+      {{- end }}
+
+  {{- /* TODO: wire CRD installation with enabled plugins. */}}
+{{- end }}
+

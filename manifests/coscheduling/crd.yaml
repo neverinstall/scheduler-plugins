@@ -13,10 +13,10 @@ spec:
     kind: PodGroup
     listKind: PodGroupList
     plural: podgroups
+    shortNames:
+    - pg
+    - pgs
     singular: podgroup
-    shortNames: # edited manually
-      - pg # edited manually
-      - pgs # edited manually
   scope: Namespaced
   versions:
     - name: v1alpha1

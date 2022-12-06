@@ -26,11 +26,18 @@ spec:
         - image: localhost:5000/scheduler-plugins/kube-scheduler:latest
           imagePullPolicy: IfNotPresent
           command:
-            - /bin/kube-scheduler
-            - --scheduler-name=topo-aware-scheduler
-            - --authentication-kubeconfig=/etc/kubernetes/scheduler.conf
-            - --authorization-kubeconfig=/etc/kubernetes/scheduler.conf
-            - --config=/etc/kubernetes/scheduler-config/scheduler-config.yaml
+            # <<<<<<< HEAD
+            #             - /bin/kube-scheduler
+            #             - --scheduler-name=topo-aware-scheduler
+            #             - --authentication-kubeconfig=/etc/kubernetes/scheduler.conf
+            #             - --authorization-kubeconfig=/etc/kubernetes/scheduler.conf
+            #             - --config=/etc/kubernetes/scheduler-config/scheduler-config.yaml
+            # =======
+          - /bin/kube-scheduler
+          - --authentication-kubeconfig=/etc/kubernetes/scheduler.conf
+          - --authorization-kubeconfig=/etc/kubernetes/scheduler.conf
+          - --config=/etc/kubernetes/scheduler-config/scheduler-config.yaml
+            # >>>>>>> upstream/master
           name: scheduler
           securityContext:
             privileged: false
